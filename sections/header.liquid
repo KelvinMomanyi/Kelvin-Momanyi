@@ -1,5 +1,6 @@
 
 
+{% unless template.name == 'index' %}
 {% liquid
   assign order = 'logo,menu,localization,search,drawer_search,actions'
 
@@ -1176,6 +1177,8 @@
     url.searchParams.delete('page');
     hydrate('{{ section.id }}', url);
   </script>
+{% endunless %}
+
 {% endunless %}
 
 {% schema %}

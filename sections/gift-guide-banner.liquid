@@ -1,0 +1,243 @@
+{{ 'gift-guide.css' | asset_url | stylesheet_tag }}
+
+<section
+  id="GiftGuideBanner-{{ section.id }}"
+  class="gift-guide-banner section section--full-width{% if section.settings.background_illustration == blank %} gift-guide-banner--reference-art{% endif %}"
+  style="--gift-guide-promo-button-color: {{ section.settings.top_bar_button_color }};"
+>
+  <div class="gift-guide-banner__mobile-header">
+    <details class="gift-guide-banner__mobile-menu">
+      <summary class="gift-guide-banner__mobile-menu-toggle" aria-label="Open menu">
+        <span class="gift-guide-banner__mobile-menu-icon" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+      </summary>
+      {% if section.settings.mobile_menu != blank %}
+        <nav class="gift-guide-banner__mobile-menu-panel" aria-label="Mobile menu">
+          <ul class="gift-guide-banner__mobile-menu-list" role="list">
+            {% for link in section.settings.mobile_menu.links %}
+              <li><a href="{{ link.url }}">{{ link.title | escape }}</a></li>
+            {% endfor %}
+          </ul>
+        </nav>
+      {% endif %}
+    </details>
+    <a class="gift-guide-banner__mobile-brand" href="{{ routes.root_url }}">
+      {{ section.settings.brand_label | default: 'Tisso Vision' | escape }}
+    </a>
+  </div>
+
+  {% if section.settings.top_bar_text != blank or section.settings.top_bar_button_label != blank %}
+    <div class="gift-guide-banner__promo">
+      {% if section.settings.brand_label != blank %}
+        <a class="gift-guide-banner__brand" href="{{ routes.root_url }}">
+          {{ section.settings.brand_label | escape }}
+        </a>
+      {% else %}
+        <span class="gift-guide-banner__promo-spacer" aria-hidden="true"></span>
+      {% endif %}
+      {% if section.settings.top_bar_text != blank %}
+        <p class="gift-guide-banner__promo-text">{{ section.settings.top_bar_text | escape }}</p>
+      {% endif %}
+
+      {% if section.settings.top_bar_button_label != blank %}
+        {% if section.settings.top_bar_button_link != blank %}
+          <a class="gift-guide-button gift-guide-banner__promo-button" href="{{ section.settings.top_bar_button_link }}">
+            <span>{{ section.settings.top_bar_button_label | escape }}</span>
+            <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+          </a>
+        {% else %}
+          <span class="gift-guide-button gift-guide-banner__promo-button" aria-disabled="true">
+            <span>{{ section.settings.top_bar_button_label | escape }}</span>
+            <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+          </span>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="gift-guide-banner__hero">
+    <div class="gift-guide-banner__copy">
+      {% if section.settings.heading != blank %}
+        <h1 class="gift-guide-banner__heading">{{ section.settings.heading | escape }}</h1>
+      {% endif %}
+
+      {% if section.settings.subheading != blank %}
+        <div class="gift-guide-banner__subheading rte">{{ section.settings.subheading }}</div>
+      {% endif %}
+
+      {% if section.settings.button_label != blank %}
+        {% if section.settings.button_link != blank %}
+          <a class="gift-guide-button gift-guide-banner__shop-button gift-guide-banner__desktop-cta" href="{{ section.settings.button_link }}">
+            <span>{{ section.settings.button_label | escape }}</span>
+            <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+          </a>
+        {% else %}
+          <span class="gift-guide-button gift-guide-banner__shop-button gift-guide-banner__desktop-cta" aria-disabled="true">
+            <span>{{ section.settings.button_label | escape }}</span>
+            <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+          </span>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="gift-guide-banner__media">
+      {% if section.settings.background_illustration != blank %}
+        {{
+          section.settings.background_illustration
+          | image_url: width: 2400
+          | image_tag:
+            widths: '750, 1100, 1500, 1920, 2400',
+            sizes: '100vw',
+            width: section.settings.background_illustration.width,
+            height: section.settings.background_illustration.height,
+            alt: section.settings.background_illustration.alt,
+            class: 'gift-guide-banner__image',
+            fetchpriority: 'high'
+        }}
+      {% else %}
+        <img
+          src="{{ 'gift-guide-hero-line-art-clean.png' | asset_url }}"
+          width="1327"
+          height="720"
+          alt=""
+          class="gift-guide-banner__image"
+          fetchpriority="high"
+        >
+      {% endif %}
+
+      {% comment %}
+        The mobile reference places the CTA on the image while desktop places it below
+        the copy. These two responsive renderings share one editable setting, avoiding
+        brittle JavaScript re-parenting while preserving the exact intended layout.
+      {% endcomment %}
+      {% if section.settings.button_label != blank %}
+        {% if section.settings.button_link != blank %}
+          <a class="gift-guide-button gift-guide-banner__shop-button gift-guide-banner__mobile-cta" href="{{ section.settings.button_link }}">
+            <span>{{ section.settings.button_label | escape }}</span>
+            <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+          </a>
+        {% else %}
+          <span class="gift-guide-button gift-guide-banner__shop-button gift-guide-banner__mobile-cta" aria-disabled="true">
+            <span>{{ section.settings.button_label | escape }}</span>
+            <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+          </span>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if section.settings.bottom_bar_text != blank %}
+    <p class="gift-guide-banner__announcement">
+      <span class="gift-guide-banner__announcement-desktop">{{ section.settings.bottom_bar_text | escape }}</span>
+      <span class="gift-guide-banner__announcement-mobile">{{ section.settings.bottom_bar_text_mobile | default: section.settings.bottom_bar_text | escape }}</span>
+    </p>
+  {% endif %}
+</section>
+
+{% schema %}
+{
+  "name": "Gift guide banner",
+  "tag": "section",
+  "class": "gift-guide-banner-wrapper section-wrapper",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Promo bar"
+    },
+    {
+      "type": "text",
+      "id": "top_bar_text",
+      "label": "Text",
+      "default": "Find the ideal gift for your loved ones."
+    },
+    {
+      "type": "text",
+      "id": "brand_label",
+      "label": "Brand name",
+      "default": "Tisso Vision"
+    },
+    {
+      "type": "text",
+      "id": "top_bar_button_label",
+      "label": "Button label",
+      "default": "Choose gift"
+    },
+    {
+      "type": "url",
+      "id": "top_bar_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "color",
+      "id": "top_bar_button_color",
+      "label": "Button color",
+      "default": "#F5E050",
+      "info": "Design-specific yellow from the Gift Guide reference."
+    },
+    {
+      "type": "link_list",
+      "id": "mobile_menu",
+      "label": "Mobile menu",
+      "default": "main-menu"
+    },
+    {
+      "type": "header",
+      "content": "Hero"
+    },
+    {
+      "type": "image_picker",
+      "id": "background_illustration",
+      "label": "Background illustration"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "The Gift Guide"
+    },
+    {
+      "type": "richtext",
+      "id": "subheading",
+      "label": "Body copy",
+      "default": "<p>Discover Joy: Your Ultimate Holiday Gift Destination. Explore our curated selection and find the perfect gifts to delight your loved ones this holiday season.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Shop button label",
+      "default": "Shop now"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Shop button link"
+    },
+    {
+      "type": "header",
+      "content": "Announcement bar"
+    },
+    {
+      "type": "text",
+      "id": "bottom_bar_text",
+      "label": "Text",
+      "default": "Sustainable, ethically made clothes in sizes XXS to 6XL"
+    },
+    {
+      "type": "text",
+      "id": "bottom_bar_text_mobile",
+      "label": "Mobile text",
+      "default": "Sustainable, ethically made activewear"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Gift guide banner",
+      "category": "Banners"
+    }
+  ]
+}
+{% endschema %}

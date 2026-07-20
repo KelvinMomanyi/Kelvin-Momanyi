@@ -1,0 +1,414 @@
+{{ 'gift-guide.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'gift-guide.js' | asset_url }}" type="module" fetchpriority="low"></script>
+
+{% liquid
+  assign bundle_variant = blank
+  if section.settings.bundle_product != blank
+    for candidate in section.settings.bundle_product.variants
+      if candidate.available
+        assign bundle_variant = candidate
+        break
+      endif
+    endfor
+  endif
+
+  # A product can be explicitly assigned to a hotspot. When it is not, use the
+  # matching product from the selected collection (or the store-wide All
+  # collection) so the default homepage is populated as soon as products exist.
+  assign product_source = section.settings.product_source
+  if product_source == blank
+    assign product_source = collections.all
+  endif
+%}
+
+<gift-guide-grid id="GiftGuideGrid-{{ section.id }}" class="gift-guide-grid section section--full-width">
+  <div class="gift-guide-grid__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="gift-guide-grid__heading">{{ section.settings.heading | escape }}</h2>
+    {% endif %}
+
+    <div class="gift-guide-grid__items">
+      {% comment %}
+        The reference calls for a fixed six-card composition. Rendering six slots
+        also keeps the homepage intact if a merchant removes a configuration block
+        in the Theme Editor; missing block settings simply use the source product.
+      {% endcomment %}
+      {% for slot in (1..6) %}
+        {% assign slot_index = forloop.index0 %}
+        {% assign block = section.blocks[slot_index] %}
+        {% assign product = blank %}
+        {% assign image = blank %}
+        {% assign hotspot_x = 50 %}
+        {% assign hotspot_y = 50 %}
+        {% assign hotspot_x_mobile = 65 %}
+        {% assign hotspot_y_mobile = 14 %}
+
+        {% if block != blank %}
+          {% assign product = block.settings.product %}
+          {% assign image = block.settings.image %}
+          {% assign hotspot_x = block.settings.hotspot_x %}
+          {% assign hotspot_y = block.settings.hotspot_y %}
+          {% assign hotspot_x_mobile = block.settings.hotspot_x_mobile %}
+          {% assign hotspot_y_mobile = block.settings.hotspot_y_mobile %}
+        {% endif %}
+
+        {% if product == blank %}
+          {% assign product = product_source.products[slot_index] %}
+        {% endif %}
+        {% assign initial_variant = product.selected_or_first_available_variant %}
+        {% assign product_image_alt = product.featured_image.alt | default: product.title %}
+        <article
+          class="gift-guide-grid__item"
+          {% if block != blank %}
+            {{ block.shopify_attributes }}
+          {% endif %}
+        >
+          <div class="gift-guide-grid__media">
+            {% if image != blank %}
+              {{
+                image
+                | image_url: width: 1200
+                | image_tag:
+                  widths: '300, 450, 600, 800, 1200',
+                  sizes: '(min-width: 750px) 33vw, 50vw',
+                  width: image.width,
+                  height: image.height,
+                  alt: image.alt,
+                  class: 'gift-guide-grid__image',
+                  loading: 'lazy'
+              }}
+            {% elsif product.featured_image != blank %}
+              {{
+                product.featured_image
+                | image_url: width: 1200
+                | image_tag:
+                  widths: '300, 450, 600, 800, 1200',
+                  sizes: '(min-width: 750px) 33vw, 50vw',
+                  width: product.featured_image.width,
+                  height: product.featured_image.height,
+                  alt: product_image_alt,
+                  class: 'gift-guide-grid__image',
+                  loading: 'lazy'
+              }}
+            {% else %}
+              {{ 'image' | placeholder_svg_tag: 'gift-guide-grid__placeholder' }}
+            {% endif %}
+
+            <button
+              type="button"
+              class="gift-guide-hotspot"
+              style="--gift-guide-hotspot-x: {{ hotspot_x }}%; --gift-guide-hotspot-y: {{ hotspot_y }}%; --gift-guide-hotspot-x-mobile: {{ hotspot_x_mobile }}%; --gift-guide-hotspot-y-mobile: {{ hotspot_y_mobile }}%;"
+              {% if product != blank %}
+                data-gift-guide-dialog="GiftGuideDialog-{{ section.id }}-{{ slot }}"
+                aria-controls="GiftGuideDialog-{{ section.id }}-{{ slot }}"
+                aria-haspopup="dialog"
+                aria-label="View {{ product.title | escape }}"
+              {% else %}
+                aria-label="Select a product for this hotspot"
+                aria-disabled="true"
+                disabled
+              {% endif %}
+            >
+              <span class="gift-guide-hotspot__icon" aria-hidden="true">{{ 'icon-plus.svg' | inline_asset_content }}</span>
+            </button>
+          </div>
+
+        {% if product != blank %}
+          {% liquid
+            assign color_option = blank
+            assign size_option = blank
+            for option in product.options_with_values
+              assign option_name = option.name | downcase
+              if option_name == 'color'
+                assign color_option = option
+              elsif option_name == 'size'
+                assign size_option = option
+              endif
+            endfor
+          %}
+
+          <gift-guide-dialog>
+            <dialog
+              id="GiftGuideDialog-{{ section.id }}-{{ slot }}"
+              class="gift-guide-popup__dialog dialog-modal"
+              ref="dialog"
+              aria-labelledby="GiftGuideDialogTitle-{{ section.id }}-{{ slot }}"
+            >
+              <button
+                class="gift-guide-popup__close"
+                type="button"
+                ref="closeButton"
+                aria-label="Close quick view"
+              >
+                <span class="gift-guide-popup__close-icon" aria-hidden="true">{{ 'icon-close.svg' | inline_asset_content }}</span>
+              </button>
+
+              <div class="gift-guide-popup__layout">
+                <div class="gift-guide-popup__product-summary">
+                  <div class="gift-guide-popup__media">
+                    {% if product.featured_image != blank %}
+                      {{
+                        product.featured_image
+                        | image_url: width: 1000
+                        | image_tag:
+                          widths: '400, 600, 800, 1000',
+                          sizes: '(min-width: 750px) 9.5rem, 40vw',
+                          width: product.featured_image.width,
+                          height: product.featured_image.height,
+                          alt: product_image_alt,
+                          class: 'gift-guide-popup__image',
+                          loading: 'lazy'
+                      }}
+                    {% else %}
+                      {{ 'product-apparel-1' | placeholder_svg_tag: 'gift-guide-popup__image' }}
+                    {% endif %}
+                  </div>
+
+                  <div class="gift-guide-popup__product-copy">
+                    <h3 id="GiftGuideDialogTitle-{{ section.id }}-{{ slot }}" class="gift-guide-popup__title">
+                      {{ product.title | escape }}
+                    </h3>
+                    <p class="gift-guide-popup__price" ref="price">
+                      {% if settings.currency_code_enabled_product_pages %}
+                        {{ initial_variant.price | money_with_currency }}
+                      {% else %}
+                        {{ initial_variant.price | money }}
+                      {% endif %}
+                    </p>
+
+                    {% if product.description != blank %}
+                      <p class="gift-guide-popup__description">{{ product.description | strip_html | truncate: 170 }}</p>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="gift-guide-popup__content">
+                  <div class="gift-guide-popup__option{% if color_option == blank %} hidden{% endif %}">
+                    <span class="gift-guide-popup__option-label">Color</span>
+                    <div class="gift-guide-popup__swatches" ref="colorSwatches">
+                      {% if color_option != blank %}
+                        {% for value in color_option.values %}
+                          {% assign color_name = value.name | default: value %}
+                          {% assign swatch_color = value.swatch.color | default: color_name %}
+                          <button
+                            class="gift-guide-popup__swatch"
+                            type="button"
+                            data-color-value="{{ color_name | escape }}"
+                            aria-pressed="false"
+                          >
+                            <span
+                              class="gift-guide-popup__swatch-color"
+                              style="--gift-guide-swatch-color: {{ swatch_color | escape }};"
+                              aria-hidden="true"
+                            ></span>
+                            <span class="gift-guide-popup__swatch-label">{{ color_name | escape }}</span>
+                          </button>
+                        {% endfor %}
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="gift-guide-popup__option{% if size_option == blank %} hidden{% endif %}">
+                    <span id="GiftGuideSizeLabel-{{ section.id }}-{{ slot }}" class="gift-guide-popup__option-label">Size</span>
+                    <div class="gift-guide-popup__size-control" ref="sizeControl">
+                      <button
+                        type="button"
+                        class="gift-guide-popup__size-trigger"
+                        ref="sizeTrigger"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="GiftGuideSizeMenu-{{ section.id }}-{{ slot }}"
+                        aria-labelledby="GiftGuideSizeLabel-{{ section.id }}-{{ slot }} GiftGuideSizeValue-{{ section.id }}-{{ slot }}"
+                      >
+                        <span id="GiftGuideSizeValue-{{ section.id }}-{{ slot }}" class="gift-guide-popup__size-value" ref="sizeLabel">Choose your size</span>
+                        <span class="gift-guide-popup__size-chevron" aria-hidden="true">
+                          {{- 'icon-caret.svg' | inline_asset_content -}}
+                        </span>
+                      </button>
+                      <div
+                        id="GiftGuideSizeMenu-{{ section.id }}-{{ slot }}"
+                        class="gift-guide-popup__size-menu"
+                        ref="sizeMenu"
+                        role="listbox"
+                        hidden
+                      ></div>
+                      <select
+                        id="GiftGuideSize-{{ section.id }}-{{ slot }}"
+                        class="gift-guide-popup__size-select"
+                        ref="sizeSelect"
+                        aria-hidden="true"
+                        tabindex="-1"
+                      >
+                        <option value="" selected>Choose your size</option>
+                        {% if size_option != blank %}
+                          {% for value in size_option.values %}
+                            {% assign size_name = value.name | default: value %}
+                            <option value="{{ size_name | escape }}">{{ size_name | escape }}</option>
+                          {% endfor %}
+                        {% endif %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <p class="gift-guide-popup__status" ref="status" role="status" aria-live="polite"></p>
+
+                  <button type="button" class="gift-guide-button gift-guide-banner__shop-button gift-guide-popup__add-button" ref="addButton">
+                    <span>Add to cart</span>
+                    <span class="gift-guide-button__arrow" aria-hidden="true">→</span>
+                  </button>
+                </div>
+              </div>
+
+              {% comment %}
+                Variant data is embedded at render time instead of fetched per click. This
+                avoids a second product request and still uses current Shopify product data.
+              {% endcomment %}
+              <script type="application/json" ref="productData">
+                {
+                  "productId": {{ product.id | json }},
+                  "variants": {{ product.variants | json }},
+                  "options": {{ product.options_with_values | json }},
+                  "moneyFormat": {{ shop.money_format | json }},
+                  "moneyWithCurrencyFormat": {{ shop.money_with_currency_format | json }},
+                  "currency": {{ localization.country.currency.iso_code | json }},
+                  "showCurrencyCode": {{ settings.currency_code_enabled_product_pages | json }},
+                  "bundleTriggerColor": {{ section.settings.bundle_trigger_color | json }},
+                  "bundleTriggerSize": {{ section.settings.bundle_trigger_size | json }},
+                  "bundleVariantId": {% if bundle_variant != blank %}{{ bundle_variant.id | json }}{% else %}null{% endif %}
+                }
+              </script>
+            </dialog>
+          </gift-guide-dialog>
+        {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</gift-guide-grid>
+
+{% schema %}
+{
+  "name": "Gift guide grid",
+  "tag": "section",
+  "class": "gift-guide-grid-wrapper section-wrapper",
+  "max_blocks": 6,
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Tisso vison in the wild"
+    },
+    {
+      "type": "collection",
+      "id": "product_source",
+      "label": "Product source",
+      "info": "Products are assigned to empty hotspots in collection order. Leave this empty to use all store products. A product selected in an individual hotspot overrides this source."
+    },
+    {
+      "type": "header",
+      "content": "Bundle rule"
+    },
+    {
+      "type": "text",
+      "id": "bundle_trigger_color",
+      "label": "Trigger color",
+      "default": "Black",
+      "info": "A matching product selection adds the configured bundle product in the same cart request."
+    },
+    {
+      "type": "text",
+      "id": "bundle_trigger_size",
+      "label": "Trigger size",
+      "default": "Medium",
+      "info": "A matching product selection adds the configured bundle product in the same cart request."
+    },
+    {
+      "type": "product",
+      "id": "bundle_product",
+      "label": "Bundle product",
+      "info": "Select Soft Winter Jacket (or the desired bundled product). Shopify product settings require a store-specific static handle for a preset default, so this is intentionally selected in the Theme Editor rather than hardcoded."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product_hotspot",
+      "name": "Product hotspot",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Lifestyle image"
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product"
+        },
+        {
+          "type": "range",
+          "id": "hotspot_x",
+          "label": "Hotspot horizontal position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50,
+          "info": "Percentage offset from the image's left edge, so the hotspot remains correctly positioned at every image size."
+        },
+        {
+          "type": "range",
+          "id": "hotspot_y",
+          "label": "Hotspot vertical position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50,
+          "info": "Percentage offset from the image's top edge, so the hotspot remains correctly positioned at every image size."
+        },
+        {
+          "type": "range",
+          "id": "hotspot_x_mobile",
+          "label": "Mobile hotspot horizontal position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 65,
+          "info": "Percentage offset from the mobile image's left edge. This follows the upper-right mobile marker placement in the reference."
+        },
+        {
+          "type": "range",
+          "id": "hotspot_y_mobile",
+          "label": "Mobile hotspot vertical position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 14,
+          "info": "Percentage offset from the mobile image's top edge. This follows the upper-right mobile marker placement in the reference."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Gift guide grid",
+      "category": "Products",
+      "blocks": {
+        "hotspot_1": { "type": "product_hotspot" },
+        "hotspot_2": { "type": "product_hotspot" },
+        "hotspot_3": { "type": "product_hotspot" },
+        "hotspot_4": { "type": "product_hotspot" },
+        "hotspot_5": { "type": "product_hotspot" },
+        "hotspot_6": { "type": "product_hotspot" }
+      },
+      "block_order": ["hotspot_1", "hotspot_2", "hotspot_3", "hotspot_4", "hotspot_5", "hotspot_6"]
+    }
+  ]
+}
+{% endschema %}
